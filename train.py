@@ -26,6 +26,7 @@ class Train:
         self.writer = SummaryWriter(config.log_path)
 
         # load training dataset generator
+        # import ipdb; ipdb.set_trace()
         if self.config.random_flip or self.config.random_crop:
             self.train_loader = LMDBDataLoaderAugmenter(
                 self.config, self.config.train_source
@@ -143,7 +144,7 @@ class Train:
                 targets = [
                     {k: v.to(self.config.device) for k, v in t.items()} for t in targets
                 ]
-
+                import ipdb; ipdb.set_trace()
                 self.optimizer.zero_grad()
 
                 # forward pass
@@ -316,7 +317,7 @@ def parse_args():
         "--lr_plateau", help="Reduce lr on plateau.", action="store_true"
     )
     parser.add_argument("--early_stop", help="Use early stop.", action="store_true")
-    parser.add_argument("--workers", help="Workers number.", default=4, type=int)
+    parser.add_argument("--workers", help="Workers number.", default=0, type=int)
     parser.add_argument(
         "--pose_mean", help="Pose mean file path.", type=str, required=True
     )

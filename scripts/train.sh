@@ -1,0 +1,14 @@
+python3 train.py \
+--pose_mean ./datasets/lmdb/WIDER_train_annotations_pose_mean.npy \
+--pose_stddev ./datasets/lmdb/WIDER_train_annotations_pose_stddev.npy \
+--workspace ./workspace/ \
+--train_source ./datasets/lmdb/WIDER_train_annotations.lmdb \
+--val_source ./datasets/lmdb/WIDER_val_annotations.lmdb \
+--prefix trial_1 \
+--batch_size 2 \
+--lr_plateau \
+--early_stop \
+--random_flip \
+--random_crop \
+--max_size 1400 \
+--random_flip 
