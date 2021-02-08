@@ -56,6 +56,7 @@ class Config(EasyDict):
         self.contrast_augmentation = args.contrast_augmentation
         self.random_flip = args.random_flip
         self.random_crop = args.random_crop
+        self.rotate = args.rotate
 
         # 3d reference points to compute pose
         self.threed_5_points = args.threed_5_points

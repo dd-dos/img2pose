@@ -50,6 +50,7 @@ class img2poseModel:
 
         # create network backbone
         backbone = resnet_fpn_backbone(f"resnet{self.depth}", pretrained=True)
+        # import ipdb; ipdb.set_trace()
 
         if pose_mean is not None:
             pose_mean = torch.tensor(pose_mean)

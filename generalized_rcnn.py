@@ -2,9 +2,17 @@ import warnings
 from collections import OrderedDict
 
 import torch
+import numpy as np
 from torch import Tensor, nn
+from torch._C import clear_autocast_cache
 from torch.jit.annotations import Dict, List, Optional, Tuple
+from PIL import Image
 
+def tensor_to_img(tensor) -> Image.Image:
+    from PIL import Image
+    import numpy as np
+    arr_img = (tensor.numpy()*255).astype(np.uint8).transpose(1,2,0)
+    return Image.fromarray(arr_img)
 
 class GeneralizedRCNN(nn.Module):
     """
@@ -52,6 +60,8 @@ class GeneralizedRCNN(nn.Module):
                 like `scores`, `labels` and `mask` (for Mask R-CNN models).
 
         """
+        imgs = images
+        tars = targets
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
         if self.training or targets is not None:
@@ -80,20 +90,37 @@ class GeneralizedRCNN(nn.Module):
 
         # Check for degenerate boxes
         # TODO: Move this to a function
-        if targets is not None:
-            for target_idx, target in enumerate(targets):
-                boxes = target["boxes"]
-                degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
-                if degenerate_boxes.any():
-                    # print the first degenrate box
-                    bb_idx = degenerate_boxes.any(dim=1).nonzero().view(-1)[0]
-                    degen_bb: List[float] = boxes[bb_idx].tolist()
-                    raise ValueError(
-                        "All bounding boxes should have positive height and width."
-                        " Found invaid box {} for target at index {}.".format(
-                            degen_bb, target_idx
-                        )
-                    )
+
+        try:
+            if targets is not None:
+                for target_idx, target in enumerate(targets):
+                    boxes = target["boxes"]
+                    degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
+                    if degenerate_boxes.any():
+                        # print the first degenrate box
+                        bb_idx = degenerate_boxes.any(dim=1).nonzero().view(-1)[0]
+                        
+                        # get index of all degenerated item:
+                        degen_flag = np.array([torch.sum(degenerate_boxes[i]).numpy() for i in range(len(degenerate_boxes))])
+                        degen_idx = np.where(degen_flag >= 1)[0]
+
+                        # remove all degenerated item
+                        for key in target.keys():
+                            for i in range(len(degen_idx)):
+                                idx = degen_idx[i] - i 
+                                print("Found 1 dengenerated item. Removing...")
+                                targets[target_idx][key] = torch.cat((target[key][:idx], target[key][idx+1:]))
+                        # degen_bb: List[float] = boxes[bb_idx].tolist()
+                        # raise Exception(
+                        #     "All bounding boxes should have positive height and width."
+                        #     " Found invaid box {} for target at index {}.".format(
+                        #         degen_bb, target_idx
+                        #     )
+                        # )
+        except Exception as ex:
+            print(ex)
+            print(ex.__traceback__.tb_lineno)
+            import ipdb; ipdb.set_trace()
 
         features = self.backbone(images.tensors)
         if isinstance(features, torch.Tensor):

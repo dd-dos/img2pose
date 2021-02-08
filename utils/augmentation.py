@@ -2,7 +2,7 @@ import random
 
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageOps, ImageDraw
 
 
 def random_crop(img, bboxes, landmarks):
@@ -19,7 +19,7 @@ def random_crop(img, bboxes, landmarks):
     while searching:
         crop_img = img.copy()
         (w, h) = crop_img.size
-        crop_size = random.uniform(0.7, 1)
+        crop_size = random.uniform(0.1, 0.5)
 
         if attempt == total_attempts:
             return img, bboxes, landmarks
@@ -58,6 +58,7 @@ def random_crop(img, bboxes, landmarks):
 def _adjust_bboxes_landmarks(bboxes, landmarks, crop_bbox):
     new_bboxes = []
     new_lms = []
+    bboxes = np.array(bboxes)
     for i in range(len(bboxes)):
         bbox = bboxes[i]
         lms = np.asarray(landmarks[i])
@@ -108,10 +109,12 @@ def random_flip(img, bboxes, all_landmarks):
         img = ImageOps.mirror(img)
 
         # flip bboxes
+        bboxes = np.array(bboxes)
         old_bboxes = bboxes.copy()
         (w, h) = img.size
         bboxes[:, 0] = w - old_bboxes[:, 2]
         bboxes[:, 2] = w - old_bboxes[:, 0]
+        bboxes = bboxes.tolist()
 
         for i in range(len(all_landmarks)):
             landmarks = np.asarray(all_landmarks[i])
@@ -204,47 +207,81 @@ def random_flip(img, bboxes, all_landmarks):
     return img, bboxes, all_landmarks
 
 
-def rotate(img, landmarks, bbox):
-    angle = random.gauss(0, 1) * 30
+def rotate(img, bboxes, all_landmarks):
+    angle = random.uniform(0, 1) * 360
 
-    (h, w) = img.shape[:2]
+    (w, h) = img.size
     (cX, cY) = (w // 2, h // 2)
+
+    new_landmarks = []
+    new_bboxes = []
 
     # Transform Image
     new_img = _rotate_img(img, angle, cX, cY, h, w)
+    new_img = Image.fromarray(new_img)
 
     # Transform Landmarks
-    new_landmarks = _rotate_landmarks(landmarks, angle, cX, cY, h, w)
+    for i in range(len(all_landmarks)):
+        landmarks = _rotate_landmarks(all_landmarks[i], angle, cX, cY, h, w)
+        new_landmarks.append(landmarks.tolist())
 
     # Transform Bounding Box
-    x1, y1, x2, y2 = bbox["left"], bbox["top"], bbox["right"], bbox["bottom"]
-    bounding_box_8pts = np.array([x1, y1, x2, y1, x2, y2, x1, y2])
+    for i in range(len(bboxes)):
+        bbox = bboxes[i]
+        x1, y1, x2, y2 = bbox
+        bounding_box_8pts = np.array([x1, y1, x2, y1, x2, y2, x1, y2])
 
-    rot_bounding_box_8pts = _rotate_bbox(bounding_box_8pts, angle, cX, cY, h, w)
-    rot_bounding_box = _get_enclosing_bbox(rot_bounding_box_8pts, y2 - y1, x2 - x1)[
-        0
-    ].astype("float")
+        rot_bounding_box_8pts = _rotate_bbox(bounding_box_8pts, angle, cX, cY, h, w)
+        rot_bounding_box = _get_enclosing_bbox(rot_bounding_box_8pts, y2 - y1, x2 - x1)[0]
 
-    new_bbox = {
-        "left": rot_bounding_box[0],
-        "top": rot_bounding_box[1],
-        "right": rot_bounding_box[2],
-        "bottom": rot_bounding_box[3],
-    }
+        # new_bbox = {
+        #     "left": rot_bounding_box[0],
+        #     "top": rot_bounding_box[1],
+        #     "right": rot_bounding_box[2],
+        #     "bottom": rot_bounding_box[3],
+        # }
+        
+        new_bbox = np.array(rot_bounding_box)
 
-    # validate that bbox boundaries are within the image otherwise do not apply rotation
-    if (
-        new_bbox["top"] > 0
-        and new_bbox["bottom"] < h
-        and bbox["left"] > 0
-        and bbox["right"] < w
-    ):
+        # validate that bbox boundaries are within the image otherwise do not apply rotation
+        new_w, new_h = new_img.size
+        if (
+            new_bbox[0] > 0
+            and new_bbox[1] > 0
+            and new_bbox[2] < new_w
+            and new_bbox[3] < new_h
+        ):
+            new_bboxes.append(new_bbox)
+    
+    if len(new_bboxes) == len(new_landmarks):
         img = new_img
-        landmarks = new_landmarks
-        bbox = new_bbox
+        all_landmarks = new_landmarks
+        bboxes = new_bboxes
 
-    return img, landmarks, bbox
+    return img, bboxes, all_landmarks
 
+def check_landmarks(img, landmarks):
+    if not isinstance(img, np.ndarray):
+        img = np.array(img)
+
+    for landmark in landmarks:
+        for i in range(len(landmark)):
+            pts = landmark[i]
+            cv2.circle(img, (pts[0], pts[1]),2,(0,255,0), -1, 8)
+
+    img = Image.fromarray(img)
+    img.show()
+
+def check_bboxes(img, bboxes):
+    if not isinstance(img, Image.Image):
+        img = Image.fromarray(img)
+
+    drawer = ImageDraw.Draw(img)
+    for bbox in bboxes:
+        drawer.rectangle(bbox.tolist(), outline='green')
+    
+    img.show()
+         
 
 def scale(img, bbox):
     scale = random.uniform(0.75, 1.25)
@@ -333,6 +370,9 @@ def add_noise(img, bboxes, landmarks):
 
 
 def _rotate_img(img, angle, cX, cY, h, w):
+    if not isinstance(img, np.ndarray):
+        img = np.array(img)
+
     M = cv2.getRotationMatrix2D((cX, cY), angle, 1.0)
     cos = np.abs(M[0, 0])
     sin = np.abs(M[0, 1])
@@ -349,6 +389,9 @@ def _rotate_img(img, angle, cX, cY, h, w):
 
 
 def _rotate_landmarks(landmarks, angle, cx, cy, h, w):
+    if not isinstance(landmarks, np.ndarray):
+        landmarks = np.array(landmarks)
+
     M = cv2.getRotationMatrix2D((cx, cy), angle, 1.0)
     cos = np.abs(M[0, 0])
     sin = np.abs(M[0, 1])
@@ -361,7 +404,7 @@ def _rotate_landmarks(landmarks, angle, cx, cy, h, w):
 
     landmarks = np.append(landmarks, np.ones((landmarks.shape[0], 1)), axis=1)
     calculated = (np.dot(M, landmarks.T)).T
-    return calculated.astype("int")
+    return calculated.astype(np.int)
 
 
 def _rotate_bbox(corners, angle, cx, cy, h, w):
@@ -383,7 +426,7 @@ def _rotate_bbox(corners, angle, cx, cy, h, w):
     calculated = np.dot(M, corners.T).T
     calculated = calculated.reshape(-1, 8)
 
-    return calculated
+    return calculated.astype(np.int)
 
 
 def _get_enclosing_bbox(corners, original_height, original_width):
@@ -393,21 +436,20 @@ def _get_enclosing_bbox(corners, original_height, original_width):
     ymin = np.min(y, 1).reshape(-1, 1)
     xmax = np.max(x, 1).reshape(-1, 1)
     ymax = np.max(y, 1).reshape(-1, 1)
+    # height = ymax - ymin
+    # width = xmax - xmin
 
-    height = ymax - ymin
-    width = xmax - xmin
+    # diff_height = height - original_height
+    # diff_width = width - original_width
 
-    diff_height = height - original_height
-    diff_width = width - original_width
-
-    ymax -= diff_height // 2
-    ymin += diff_height // 2
-    xmax -= diff_width // 2
-    xmin += diff_width // 2
+    # ymax -= diff_height // 2
+    # ymin += diff_height // 2
+    # xmax -= diff_width // 2
+    # xmin += diff_width // 2
 
     final = np.hstack((xmin, ymin, xmax, ymax, corners[:, 8:]))
 
-    return final.astype("int")
+    return final.astype(np.int)
 
 
 def _scale_bbox(img, bbox, scale):

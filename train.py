@@ -26,7 +26,6 @@ class Train:
         self.writer = SummaryWriter(config.log_path)
 
         # load training dataset generator
-        # import ipdb; ipdb.set_trace()
         if self.config.random_flip or self.config.random_crop:
             self.train_loader = LMDBDataLoaderAugmenter(
                 self.config, self.config.train_source
@@ -53,6 +52,7 @@ class Train:
             threed_5_points=np.load(self.config.threed_5_points),
         )
         # optimizer for the backbone and heads
+
         if args.optimizer == "Adam":
             self.optimizer = optim.Adam(
                 self.img2pose_model.fpn_model.parameters(),
@@ -139,19 +139,19 @@ class Train:
             idx = 0
             for idx, data in enumerate(self.train_loader):
                 imgs, targets = data
-
                 imgs = [image.to(self.config.device) for image in imgs]
                 targets = [
                     {k: v.to(self.config.device) for k, v in t.items()} for t in targets
                 ]
-                import ipdb; ipdb.set_trace()
                 self.optimizer.zero_grad()
 
                 # forward pass
+                
                 losses = self.img2pose_model.forward(imgs, targets)
 
                 loss = sum(loss for loss in losses.values())
-
+                if loss.item() > 100000:
+                    import ipdb; ipdb.set_trace()
                 # does a backward propagation through the network
                 loss.backward()
 
@@ -353,6 +353,7 @@ def parse_args():
     parser.add_argument("--contrast_augmentation", action="store_true")
     parser.add_argument("--random_flip", action="store_true")
     parser.add_argument("--random_crop", action="store_true")
+    parser.add_argument("--rotate", action="store_true")
 
     # distributed training parameters
     parser.add_argument(

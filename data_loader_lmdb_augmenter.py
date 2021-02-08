@@ -45,6 +45,30 @@ class LMDB(Dataset):
 
         self.threed_5_points = np.load(self.config.threed_5_points)
         self.threed_68_points = np.load(self.config.threed_68_points)
+        
+        # try:
+        #     index = 0
+        #     while True:
+        #         lms = self.get_landmarks(index)
+        #         print("currently at {}".format(index))
+        #         for lm in lms:
+        #             print(len(lm))
+        #             if -1 in lm:
+        #                 raise Exception
+
+        #         print("+++++++++++++++++++++++++++")
+        #         if -1 in lms:
+        #             raise Exception("-1 in landmarks")
+        #         index += 1 
+        # except Exception as e:
+        #     print(e)   
+        #     import ipdb; ipdb.set_trace()
+
+    def get_landmarks(self, index):
+        with self.env.begin(write=False) as txn:
+            byteflow = txn.get(self.keys[index])
+        data = msgpack.loads(byteflow)
+        return data[4]
 
     def __getitem__(self, index):
         img, target = None, None
@@ -68,6 +92,8 @@ class LMDB(Dataset):
 
         # apply augmentations that are provided from the parent class in creation order
         for augmentation_method in self.augmentation_methods:
+            # if len(bbox_labels) > 1:
+            #     import ipdb; ipdb.set_trace()
             img, bbox_labels, landmark_labels = augmentation_method(
                 img, bbox_labels, landmark_labels
             )
@@ -138,7 +164,7 @@ class LMDB(Dataset):
             "boxes": torch.from_numpy(np.asarray(projected_bbox_labels)).float(),
             "labels": torch.ones((len(bbox_labels),), dtype=torch.int64),
         }
-
+        
         return img, target
 
     def __len__(self):
@@ -154,6 +180,9 @@ class LMDBDataLoaderAugmenter(DataLoader):
         augmentation_methods = []
 
         if train:
+            if self.config.rotate:
+                augmentation_methods.append(augmentation.rotate)
+
             if self.config.random_flip:
                 augmentation_methods.append(augmentation.random_flip)
 
@@ -220,3 +249,4 @@ class LMDBDataLoaderAugmenter(DataLoader):
 
 def collate_fn(batch):
     return tuple(zip(*batch))
+

@@ -10,5 +10,6 @@ python3 train.py \
 --early_stop \
 --random_flip \
 --random_crop \
---max_size 1400 \
---random_flip 
+--max_size 140 \
+--random_flip \
+--rotate
