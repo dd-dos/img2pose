@@ -4,7 +4,7 @@ python3 train.py \
 --workspace ./workspace/ \
 --train_source ./datasets/lmdb/WIDER_train_annotations.lmdb \
 --val_source ./datasets/lmdb/WIDER_val_annotations.lmdb \
---prefix trial_1 \
+--prefix img2pose_rotate \
 --batch_size 2 \
 --lr_plateau \
 --early_stop \
@@ -12,4 +12,5 @@ python3 train.py \
 --random_crop \
 --max_size 140 \
 --random_flip \
---rotate
+--rotate \
+--pretrained_path ./models/img2pose_v1.pth
