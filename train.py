@@ -150,8 +150,8 @@ class Train:
                 losses = self.img2pose_model.forward(imgs, targets)
 
                 loss = sum(loss for loss in losses.values())
-                if loss.item() > 100000:
-                    import ipdb; ipdb.set_trace()
+                # if loss.item() > 100000:
+                #     import ipdb; ipdb.set_trace()
                 # does a backward propagation through the network
                 loss.backward()
 
