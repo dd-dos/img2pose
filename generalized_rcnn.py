@@ -120,7 +120,6 @@ class GeneralizedRCNN(nn.Module):
         except Exception as ex:
             print(ex)
             print(ex.__traceback__.tb_lineno)
-            import ipdb; ipdb.set_trace()
 
         features = self.backbone(images.tensors)
         if isinstance(features, torch.Tensor):

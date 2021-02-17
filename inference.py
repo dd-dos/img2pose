@@ -112,8 +112,8 @@ def test_pose():
         if key == ord("q"):
             break
 
-        if key == ord("d"):
-            import ipdb; ipdb.set_trace()
+        # if key == ord("d"):
+        #     import ipdb; ipdb.set_trace()
 
 def get_pose_from_imgs_folder(folder_path):
     import glob
