@@ -108,7 +108,7 @@ class GeneralizedRCNN(nn.Module):
                         for key in target.keys():
                             for i in range(len(degen_idx)):
                                 idx = degen_idx[i] - i 
-                                print("Found 1 dengenerated item. Removing...")
+                                # print("Found 1 dengenerated item. Removing...")
                                 targets[target_idx][key] = torch.cat((target[key][:idx], target[key][idx+1:]))
                         # degen_bb: List[float] = boxes[bb_idx].tolist()
                         # raise Exception(
