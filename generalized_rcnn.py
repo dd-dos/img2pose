@@ -101,7 +101,7 @@ class GeneralizedRCNN(nn.Module):
                         bb_idx = degenerate_boxes.any(dim=1).nonzero().view(-1)[0]
                         
                         # get index of all degenerated item:
-                        degen_flag = np.array([torch.sum(degenerate_boxes[i]).numpy() for i in range(len(degenerate_boxes))])
+                        degen_flag = np.array([torch.sum(degenerate_boxes[i]).cpu().numpy() for i in range(len(degenerate_boxes))])
                         degen_idx = np.where(degen_flag >= 1)[0]
 
                         # remove all degenerated item
