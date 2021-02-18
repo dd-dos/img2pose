@@ -220,7 +220,8 @@ class Train:
         if val_loss < self.best_val_loss:
             self.best_val_loss = val_loss
             self.best_step = step
-
+                
+            print("Saving model...\n")
             save_model(
                 self.img2pose_model.fpn_model_without_ddp,
                 self.optimizer,
@@ -228,6 +229,8 @@ class Train:
                 val_loss,
                 step,
             )
+            print("Done saving! \n")
+
 
     def reduce_lr(self):
         for params in self.optimizer.param_groups:

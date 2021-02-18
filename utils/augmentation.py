@@ -56,7 +56,6 @@ def random_crop(img, bboxes, landmarks):
 
 
 def _adjust_bboxes_landmarks(bboxes, landmarks, crop_bbox):
-    import ipdb; ipdb.set_trace()
     new_bboxes = []
     new_lms = []
     bboxes = np.array(bboxes)
